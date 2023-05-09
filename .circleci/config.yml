@@ -1,0 +1,72 @@
+# Scala CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/sample-config/ for more details
+#
+version: 2.1
+
+orbs:
+  aws-cli: circleci/aws-cli@1.2.1
+
+workflows:
+  prod-build:
+    jobs:
+      - build:
+          context: aturner
+
+jobs:
+  build:
+    docker:
+      # specify the version you desire here
+      - image: circleci/openjdk:11-jdk
+
+
+    working_directory: ~/repo
+
+    environment:
+      # Customize the JVM maximum heap limit
+      JVM_OPTS: -Xmx3200m
+      TERM: dumb
+
+    steps:
+      - run: # Install the AWS CLI if it is not already included in the docker image
+          name: Install awscli
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y awscli
+
+      - setup_remote_docker:
+          docker_layer_caching: true
+
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "build.sbt" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+      - run:
+          command: |
+            mkdir -p ~/creds
+
+      - run: cat /dev/null | sbt test:compile
+
+      - save_cache:
+          paths:
+            - ~/.m2
+          key: v1-dependencies--{{ checksum "build.sbt" }}
+
+      - store_test_results:
+          path: test-results
+
+      # run tests!
+      - run: cat /dev/null | sbt test:test
+
+#      - run:
+#          command: |
+#            sbt docker:publishLocal
+#            eval $(aws ecr get-login --no-include-email --region ${AWS_REGION})
+#            docker tag ${CIRCLE_PROJECT_REPONAME}:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ENV}-${CIRCLE_PROJECT_REPONAME}:${CIRCLE_SHA1}
+#
+#            IMAGE=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ENV}-${CIRCLE_PROJECT_REPONAME}:${CIRCLE_SHA1}
+#            docker push ${IMAGE}
