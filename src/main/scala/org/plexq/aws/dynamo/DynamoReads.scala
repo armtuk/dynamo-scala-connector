@@ -7,7 +7,6 @@ abstract class DynamoReads[A](implicit val value: Item) extends Logging {
   import DynamoRepository._
 
   def apply(): A
-
   def PK: String = value.getString(Dynamo.HK)
   def SK: String = value.getString(Dynamo.SK)
 
@@ -15,6 +14,7 @@ abstract class DynamoReads[A](implicit val value: Item) extends Logging {
   def boolean(name: String): Boolean  = itemToBoolean(value, name)
   def long(name: String): Long = itemToLong(value, name)
   def int(name: String): Int = itemToInt(value, name)
+  def bigDecimal(name: String): BigDecimal = itemToBigDecimal(value, name)
   def timestamp(name: String): java.sql.Timestamp = itemToTimestamp(value, name)
   def date(name: String): java.sql.Date= itemToDate(value, name)
   def list[T](name: String): List[T]= itemToList[T](value, name)

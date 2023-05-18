@@ -62,6 +62,9 @@ jobs:
       # run tests!
       - run: cat /dev/null | sbt test:test
 
+      - run: |
+          export CODEARTIFACT_AUTH_TOKEN=`aws codeartifact get-authorization-token --domain plexq --domain-owner 269378281721 --region us-east-2 --query authorizationToken --output text`
+          sbt publish
 #      - run:
 #          command: |
 #            sbt docker:publishLocal

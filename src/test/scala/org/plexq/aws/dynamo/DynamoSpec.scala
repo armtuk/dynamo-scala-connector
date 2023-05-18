@@ -1,6 +1,7 @@
 package org.plexq.aws.dynamo
 
 import com.amazonaws.services.dynamodbv2.document.Item
+import org.plexq.aws.dynamo.DynamoRepository.DynamoKeyValue
 import play.api.libs.json.{JsArray, JsNumber, Json}
 
 import scala.concurrent.Await
@@ -96,5 +97,37 @@ class DynamoSpec extends PlexqSpec {
       r must be(None)
     }
 
+    "serialize and deserialize all base types" in {
+      case class TestPrimitives(a: Int, b: Long, c: String, d: BigDecimal)
+      val writer = new DynamoWrites[TestPrimitives] {
+        override def HK(item: TestPrimitives): DynamoKeyValue = "testPrimitives:" + item.c
+
+        override def SK(item: TestPrimitives): DynamoKeyValue = "1"
+
+        override val mappings: Map[String, TestPrimitives => Any] = Map(
+          "a" -> (_.a),
+          "b" -> (_.b),
+          "c" -> (_.c),
+          "d" -> (_.d.toString)
+        )
+      }
+
+      val reader: Item => TestPrimitives = (value: Item) => new DynamoReads[TestPrimitives]()(value) {
+        import DynamoRepository._
+        override def apply(): TestPrimitives = TestPrimitives(
+          int("a"), long("b"), string("c"), bigDecimal("d")
+        )
+      }.apply()
+
+      val a = TestPrimitives(1, 2L, "alpha", BigDecimal(10.01))
+
+      val item = writer.apply(a)
+
+      val write = Await.result(dynamo.putItem(item), 30.seconds)
+
+      val r = Await.result(dynamo.readByKey("testPrimitives:alpha", "1")(reader), 300.seconds)
+
+      r must be (Some(a))
+    }
   }
 }

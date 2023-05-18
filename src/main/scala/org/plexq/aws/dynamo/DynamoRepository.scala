@@ -26,6 +26,9 @@ trait DynamoRepository {
   val tableName: String = config.getString(ConfigKeys.AWS.Dynamo.tableName)
   implicit val executionContext: ExecutionContext
 
+  def readByKey[T](hashKey: String, sortKey: String)(implicit converter: Item => T): Future[Option[T]] =
+    dynamo.readByKey(hashKey, sortKey)(converter)
+
   def readByHashKey[T](hashKey: String, converter: Item => T): Future[Seq[T]] =
     dynamo.readByHashKey(hashKey).map(_.map(converter))
 
@@ -83,6 +86,7 @@ object DynamoRepository {
   implicit def itemToBoolean(item: Item, name: String): Boolean = item.getBoolean(name)
   implicit def itemToLong(item: Item, name: String): Long = item.getLong(name)
   implicit def itemToInt(item: Item, name: String): Int = item.getInt(name)
+  implicit def itemToBigDecimal(item: Item, name: String): BigDecimal = BigDecimal(item.getString(name))
   implicit def itemToJson(item: Item, name: String): JsValue = if (item.get(name) == null) JsNull else Json.parse{
     // Because if you call item.getJSON() it escapes everything.
     item.getString(name)
