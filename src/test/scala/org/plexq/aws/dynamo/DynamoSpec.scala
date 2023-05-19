@@ -108,7 +108,7 @@ class DynamoSpec extends PlexqSpec {
           "a" -> (_.a),
           "b" -> (_.b),
           "c" -> (_.c),
-          "d" -> (_.d.toString)
+          "d" -> (_.d)
         )
       }
 

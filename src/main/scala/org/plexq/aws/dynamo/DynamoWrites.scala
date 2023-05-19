@@ -26,6 +26,12 @@ abstract class DynamoWrites[T] {
       Dynamo.GSI_3_SK -> (x => GSI3(x)._2),
       Dynamo.GSI_4_HK -> (x => GSI4(x)._1),
       Dynamo.GSI_4_SK -> (x => GSI4(x)._2)
-    ) ++ mappings).foldLeft(new Item())((a, b) => if (b._2(value)!=null) a.`with`(b._1, b._2(value)) else a)
+    ) ++ mappings).foldLeft(new Item())((a, b) => if (b._2(value)!=null) {
+      b._2(value) match {
+        // Not sure if this is really a good idea... but I _think_ so.
+        case v: BigDecimal => a.`with`(b._1, v.toString)
+        case _ => a.`with`(b._1, b._2(value))
+      }
+    } else a)
   }
 }
