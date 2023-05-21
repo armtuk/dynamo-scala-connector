@@ -23,7 +23,8 @@ trait DynamoRepository {
 
   val dynamo: Dynamo
   val config: Config
-  val tableName: String = config.getString(ConfigKeys.AWS.Dynamo.tableName)
+  // Late binding because config is null until the child class is initialized
+  lazy val tableName: String = config.getString(ConfigKeys.AWS.Dynamo.tableName)
   implicit val executionContext: ExecutionContext
 
   def readByKey[T](hashKey: String, sortKey: String)(implicit converter: Item => T): Future[Option[T]] =

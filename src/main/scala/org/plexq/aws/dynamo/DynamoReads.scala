@@ -3,11 +3,11 @@ package org.plexq.aws.dynamo
 import com.amazonaws.services.dynamodbv2.document.Item
 import play.api.libs.json.JsValue
 
-abstract class DynamoReads[A](implicit val value: Item) extends Logging {
+abstract class DynamoReads[A <: DynamoEntity](implicit val value: Item) extends Logging {
   import DynamoRepository._
 
   def apply(): A
-  def PK: String = value.getString(Dynamo.HK)
+  def HK: String = value.getString(Dynamo.HK)
   def SK: String = value.getString(Dynamo.SK)
 
   def string(name: String): String = itemToString(value, name)

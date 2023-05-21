@@ -2,7 +2,7 @@ package org.plexq.aws.dynamo
 
 import com.amazonaws.services.dynamodbv2.document.Item
 import org.plexq.aws.dynamo.DynamoRepository.DynamoKeyValue
-import play.api.libs.json.{JsArray, JsNumber, Json}
+import play.api.libs.json.{JsArray, JsNumber, JsObject, Json}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -98,36 +98,39 @@ class DynamoSpec extends PlexqSpec {
     }
 
     "serialize and deserialize all base types" in {
-      case class TestPrimitives(a: Int, b: Long, c: String, d: BigDecimal)
+      case class TestPrimitives(a: Int, b: Long, c: String, d: BigDecimal, e: JsArray, f: JsObject) extends DynamoEntity {
+        override val hashKey: DynamoKeyValue = "testPrimitives:" + c
+        override val sortKey: DynamoKeyValue = "1"
+      }
+
       val writer = new DynamoWrites[TestPrimitives] {
-        override def HK(item: TestPrimitives): DynamoKeyValue = "testPrimitives:" + item.c
-
-        override def SK(item: TestPrimitives): DynamoKeyValue = "1"
-
         override val mappings: Map[String, TestPrimitives => Any] = Map(
           "a" -> (_.a),
           "b" -> (_.b),
           "c" -> (_.c),
-          "d" -> (_.d)
+          "d" -> (_.d),
+          "e" -> (_.e),
+          "f" -> (_.f)
         )
       }
 
       val reader: Item => TestPrimitives = (value: Item) => new DynamoReads[TestPrimitives]()(value) {
         import DynamoRepository._
         override def apply(): TestPrimitives = TestPrimitives(
-          int("a"), long("b"), string("c"), bigDecimal("d")
+          int("a"), long("b"), string("c"), bigDecimal("d"), json("e").as[JsArray], json("f").as[JsObject]
         )
       }.apply()
 
-      val a = TestPrimitives(1, 2L, "alpha", BigDecimal(10.01))
+      val a = TestPrimitives(1, 2L, "alpha", BigDecimal(10.01), Json.toJson(Seq(1, 2, 3)).as[JsArray], Json.obj("a" -> "b"))
 
       val item = writer.apply(a)
 
       val write = Await.result(dynamo.putItem(item), 30.seconds)
 
-      val r = Await.result(dynamo.readByKey("testPrimitives:alpha", "1")(reader), 300.seconds)
+      val r = Await.result(dynamo.readByKey("testPrimitives:alpha", "1")(reader), 300.seconds).get
 
-      r must be (Some(a))
+      r must be (a)
+
     }
   }
 }

@@ -1,11 +1,12 @@
 package org.plexq.aws.dynamo
 
 import com.amazonaws.services.dynamodbv2.document.Item
+import play.api.libs.json.{JsArray, JsObject, Json}
 
-abstract class DynamoWrites[T] {
+abstract class DynamoWrites[T <: DynamoEntity] {
   import DynamoRepository.DynamoKeyValue
-  def HK(item: T): DynamoKeyValue
-  def SK(item: T): DynamoKeyValue
+  def HK(item: T): DynamoKeyValue = item.hashKey
+  def SK(item: T): DynamoKeyValue = item.sortKey
 
   def GSI1(item: T): (DynamoKeyValue, DynamoKeyValue) = (null, null)
   def GSI2(item: T): (DynamoKeyValue, DynamoKeyValue) = (null, null)
@@ -30,6 +31,9 @@ abstract class DynamoWrites[T] {
       b._2(value) match {
         // Not sure if this is really a good idea... but I _think_ so.
         case v: BigDecimal => a.`with`(b._1, v.toString)
+        // Serialize complex Json objects as strings here
+        case v: JsArray => a.withString(b._1, Json.prettyPrint(v))
+        case v: JsObject => a.withString(b._1, Json.prettyPrint(v))
         case _ => a.`with`(b._1, b._2(value))
       }
     } else a)
